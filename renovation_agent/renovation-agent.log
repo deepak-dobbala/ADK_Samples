@@ -16,3 +16,56 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 psycopg2.OperationalError: connection to server at "ep-faling-darkness-atjmjpds-pooler.c-9.us-east-1.aws.neon.tech" (3.220.135.142), port 5432 failed: ERROR:  password authentication failed for user 'agent_user'
 
+2026-08-10 21:53:47,857 [INFO] root Calling the pooling Connection to DB
+2026-08-10 21:53:50,472 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:02:05,555 [INFO] root Calling the pooling Connection to DB
+2026-08-10 22:02:08,049 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:02:08,661 [INFO] root Dropped the Table material_order_status  if exists
+2026-08-10 22:06:24,933 [INFO] root Calling the pooling Connection to DB
+2026-08-10 22:06:24,933 [INFO] db_gateway.main creation Orders Table
+2026-08-10 22:06:26,515 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:06:26,939 [INFO] root Dropped the Table material_order_status  if exists
+2026-08-10 22:06:26,940 [INFO] root Schema and seed_data Collected
+2026-08-10 22:06:26,941 [ERROR] root Error during Table creation
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 44, in create_orders_table
+    execute_query(cur,schema_path)
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 24, in execute_query
+    with open(filePath,'r',encoding="UTF-8") as sql_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'D:\\Project_Documents\\ADK_samples\\renovation_agent\\db_gateway\\migrations\\01_schema.sql'
+2026-08-10 22:10:21,864 [INFO] db_gateway.main creation Orders Table
+2026-08-10 22:10:55,258 [INFO] db_gateway.main creation Orders Table
+2026-08-10 22:10:57,071 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:10:57,678 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 22:10:57,679 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 22:10:57,971 [ERROR] db_gateway.main Error during Table creation
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 43, in create_orders_table
+    execute_query(cur,schema_path)
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 27, in execute_query
+    cursor.execute(query)
+psycopg2.errors.InsufficientPrivilege: permission denied for schema public
+LINE 1: CREATE TABLE material_order_status (
+                     ^
+
+2026-08-10 22:18:14,676 [INFO] db_gateway.main creation Orders Table
+2026-08-10 22:18:23,884 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:18:24,307 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 22:18:24,314 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 22:18:24,546 [ERROR] db_gateway.main Error during Table creation
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 43, in create_orders_table
+    execute_query(cur,schema_path)
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 27, in execute_query
+    cursor.execute(query)
+psycopg2.errors.InsufficientPrivilege: permission denied for schema public
+LINE 1: CREATE TABLE material_order_status (
+                     ^
+
+2026-08-10 22:38:40,191 [INFO] db_gateway.main creation Orders Table
+2026-08-10 22:38:42,575 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 22:38:43,269 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 22:38:43,271 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 22:38:43,590 [INFO] db_gateway.main Created the table material_order_status
+2026-08-10 22:38:43,888 [INFO] db_gateway.main Added the Data Succesfully to the table

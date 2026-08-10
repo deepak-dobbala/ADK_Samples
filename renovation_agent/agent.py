@@ -13,8 +13,8 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
-from db_gateway.main import get_pool_conn
-get_pool_conn()
+from db_gateway.main import create_orders_table
+create_orders_table()
 
 load_dotenv()
 Model_Name = os.getenv('MODEL_NAME')
