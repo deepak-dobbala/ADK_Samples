@@ -1,5 +1,5 @@
 CREATE TABLE material_order_status (
-    order_id VARCHAR(50) PRIMARY KEY,
+    order_id SERIAL PRIMARY KEY,
     material_name VARCHAR(100) NOT NULL,
     supplier_name VARCHAR(100) NOT NULL,
     order_date DATE NOT NULL,

@@ -69,3 +69,37 @@ LINE 1: CREATE TABLE material_order_status (
 2026-08-10 22:38:43,271 [INFO] db_gateway.main Schema and seed_data Collected
 2026-08-10 22:38:43,590 [INFO] db_gateway.main Created the table material_order_status
 2026-08-10 22:38:43,888 [INFO] db_gateway.main Added the Data Succesfully to the table
+2026-08-10 23:13:14,911 [INFO] db_gateway.main creation Orders Table
+2026-08-10 23:13:17,357 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 23:13:17,829 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 23:13:17,829 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 23:13:18,125 [INFO] db_gateway.main Created the table material_order_status
+2026-08-10 23:13:18,372 [ERROR] db_gateway.main Error during Table creation
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 44, in create_orders_table
+    execute_query(cur,data_path)
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 26, in execute_query
+    cursor.execute(query)
+psycopg2.errors.NotNullViolation: null value in column "order_id" of relation "material_order_status" violates not-null constraint
+DETAIL:  Failing row contains (null, Safety Glasses, Safety Gear Ltd., 2025-04-25, 2025-05-02, null, 5, null, 5.00, null, Ordered, 123 Main St, John Doe, 555-1234, null, Protective safety glasses., 2026-08-10 17:43:14.680642, 2026-08-10 17:43:14.680642, null, null, Low, PROJ-002, null, null, PO-025).
+
+2026-08-10 23:16:12,027 [INFO] db_gateway.main creation Orders Table
+2026-08-10 23:16:13,449 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 23:16:13,904 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 23:16:13,905 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 23:16:14,142 [INFO] db_gateway.main Created the table material_order_status
+2026-08-10 23:16:14,386 [ERROR] db_gateway.main Error during Table creation
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 44, in create_orders_table
+    execute_query(cur,data_path)
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 26, in execute_query
+    cursor.execute(query)
+psycopg2.errors.NotNullViolation: null value in column "order_id" of relation "material_order_status" violates not-null constraint
+DETAIL:  Failing row contains (null, Lumber - 2x4, ABC Lumber Co., 2025-04-01, 2025-04-06, 2025-04-06, 100, 100, 2.50, 250.00, Delivered, 123 Main St, John Doe, 555-1234, TRACK123, Standard grade lumber., 2026-08-10 17:46:10.764744, 2026-08-10 17:46:10.764744, t, No issues found., Medium, PROJ-001, Jane Smith, null, PO-001).
+
+2026-08-10 23:20:10,820 [INFO] db_gateway.main creation Orders Table
+2026-08-10 23:20:12,539 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 23:20:12,978 [INFO] db_gateway.main Dropped the Table material_order_status  if exists
+2026-08-10 23:20:12,978 [INFO] db_gateway.main Schema and seed_data Collected
+2026-08-10 23:20:13,256 [INFO] db_gateway.main Created the table material_order_status
+2026-08-10 23:20:13,492 [INFO] db_gateway.main Added the Data Succesfully to the table

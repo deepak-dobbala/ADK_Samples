@@ -1,8 +1,8 @@
 import psycopg2
-from psycopg2 import pool
 import os
-from dotenv import load_dotenv
 import logging
+from psycopg2 import pool
+from dotenv import load_dotenv
 
 _pool=None
 load_dotenv()
@@ -49,6 +49,20 @@ def create_orders_table():
     finally:
         _pool.putconn(conn)
         
+def add_new_order(order_details:dict):
+    _pool=get_pool_conn()
+    conn = _pool.getconn()
+    insert_query_path = os.path.join(os.path.dirname('__file__'),"migartion","03_insert_record.sql")
+    with open(insert_query_path,'r',encoding="UTF-8") as read_file:
+        query=read_file.read()
+    try:
+        with conn.cursor() as cur:
+            conn.execute(query,())
+    except Exception:
+        logger.exception("Error occured while inserting Record")
+    finally:
+        _pool.putconn(conn)
+
 
 if __name__=="__main__":
     create_orders_table()
