@@ -1,0 +1,18 @@
+2026-08-10 11:46:56,448 [INFO] root Calling the pooling Connection to DB
+2026-08-10 11:46:57,895 [INFO] db_gateway.main The Pooling connection to the DB established
+2026-08-10 11:47:18,102 [INFO] root Calling the pooling Connection to DB
+2026-08-10 11:47:19,557 [ERROR] db_gateway.main Error Occured while establishing connection
+Traceback (most recent call last):
+  File "D:\Project_Documents\ADK_samples\renovation_agent\db_gateway\main.py", line 16, in get_pool_conn
+    _pool = psycopg2.pool.SimpleConnectionPool(1,5,DB_url,sslmode="require")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Project_Documents\ADK_samples\.adkenv\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "D:\Project_Documents\ADK_samples\.adkenv\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Project_Documents\ADK_samples\.adkenv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "ep-faling-darkness-atjmjpds-pooler.c-9.us-east-1.aws.neon.tech" (3.220.135.142), port 5432 failed: ERROR:  password authentication failed for user 'agent_user'
+

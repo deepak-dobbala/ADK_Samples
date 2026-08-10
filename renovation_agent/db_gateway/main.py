@@ -1,31 +1,23 @@
-from dotenv import load_dotenv
-import os
-import logging
+import psycopg2
 from psycopg2 import pool
-from contextlib import asynccontextmanager
-from fastapi import FastAPI,HTTPException,Depends,Header
+import os
+from dotenv import load_dotenv
+import logging
 
-
+_pool=None
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
+DB_url = os.getenv("NEON_DATABASE_URL")
+logging.info("Calling the pooling Connection to DB")
 logger = logging.getLogger(__name__)
-
-DB_URL = os.getenv('NEON_DATABASE_URL')
-GATEWAY_API_KEY = os.getenv('GATEWAY_API_KEY')
-_pool: pool.ThreadConnectionPool | None = None
-
-@asynccontextmanager
-async def lifetime(app: FastAPI):
+def get_pool_conn():
     global _pool
-    _pool = pool.ThreadConnectionPool(minconn=1, maxconn=10, dsn=DB_URL)
-    logger.info("Database connection pool created")
-    yield
-    if _pool:
-        _pool.closeall()
-        logger.info("Database connection pool closed")
+    try:
+        if _pool is None:
+            _pool = psycopg2.pool.SimpleConnectionPool(1,5,DB_url,sslmode="require")
+            logger.info("The Pooling connection to the DB established")
+        return _pool
+    except Exception:
+        logger.exception("Error Occured while establishing connection")
+        raise
 
-app=FastAPI(lifespan=lifetime,title="DB Gateway",description="A gateway for the database")
-
-def verify_api_key(api_key: str = Header(...)):
-    if api_key != GATEWAY_API_KEY:
-        HTTPException(status_code=401, detail="Invalid API key")
+get_pool_conn()
