@@ -1,0 +1,2 @@
+INSERT INTO material_order_status (material_name, supplier_name, order_date, estimated_delivery_date, actual_delivery_date, quantity_ordered, quantity_received, unit_price, total_amount, order_status, delivery_address, contact_person, contact_phone, tracking_number, notes, quality_check_passed, quality_check_notes, priority, project_id, receiver_name, return_reason, po_number) VALUES 
+(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s); 

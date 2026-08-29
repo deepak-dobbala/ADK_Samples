@@ -1,5 +1,6 @@
 from google.adk.agents.llm_agent import Agent
 from google.genai import types
+from google.genai.types import GenerateContentConfig
 from dotenv import load_dotenv
 import os
 import logging
@@ -13,8 +14,8 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
-from db_gateway.main import create_orders_table
-create_orders_table()
+#from db_gateway.main import create_orders_table
+#create_orders_table()
 
 load_dotenv()
 Model_Name = os.getenv('MODEL_NAME')
@@ -41,4 +42,5 @@ root_agent = Agent(
 
     Identify the intent from the user query and find the suitable sub agent which can be more that one that are required for the user query based the provided descriptions, then once you have the required infromation you can prompt the respective sub agents [one or more based on the suer query]
     ''',
+    generate_content_config = GenerateContentConfig(temparature = 0.1)   
 )

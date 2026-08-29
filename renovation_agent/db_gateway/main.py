@@ -57,7 +57,9 @@ def add_new_order(order_details:dict):
         query=read_file.read()
     try:
         with conn.cursor() as cur:
-            conn.execute(query,())
+            conn.execute(query,order_details)
+            conn.commit()
+            logger.info("Record Inserted Successfully")
     except Exception:
         logger.exception("Error occured while inserting Record")
     finally:
