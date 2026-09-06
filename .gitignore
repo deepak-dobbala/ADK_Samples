@@ -1,3 +1,4 @@
-.adkenv
+*.adkenv
+*.venv
 *.zip
 *.env
