@@ -42,8 +42,11 @@ def format_alerts(features : dict) -> str:
 
 @mcp.tool()
 async def get_weather_alert(state : str) -> str:
-    # Get the weather of a american state 
-    # Args : state : two letter word for each state (eg : CA, NY)
+    ''' Get the weather of a american state 
+    Args : state : two letter word for each state (eg : CA, NY)
+    '''
+    # Docstrings are Crucial! The agent's LLM relies heavily on the function's docstring to understand
+    # Write clear, descriptive, and accurate docstrings for your tools. This is essential for the LLM to use the tool correctly.
     url = f"{NWS_API_BASE}/alerts/active/area/{state}"
     data = await make_nws_request(url)
     if not data or "features" not in data:
