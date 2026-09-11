@@ -19,6 +19,7 @@ from mcp import StdioServerParameters
 
 load_dotenv()
 MODEL_NAME = os.getenv('MODEL_NAME')
+MCP_SERVER = os.getenv('MCP_SERVER')
 APP_NAME = "MCP_Agent_App"
 USER_ID = "USER_001"
 
@@ -26,7 +27,7 @@ toolset = McpToolset(
     connection_params = StdioConnectionParams(
         server_params = StdioServerParameters(
             command = "uv",
-            args = ["run","src/mcp_server/weather.py"]
+            args = ["run",MCP_SERVER]
         )
     )
 )
@@ -38,7 +39,7 @@ async def get_tools_from_mcp(toolset : McpToolset) -> None:
     for tool in tools_list:
         print(f"Name : {tool.name} - description : {tool.description}",end = "\n")
 
-
+#asyncio.run(get_tools_from_mcp(toolset))
 # Responsible for managing conversation history and state for different users and sessions
 # InMemorySessionService is only for Development, Use a persistent storage for production Environment
 session_service = InMemorySessionService().create_session(
@@ -50,12 +51,12 @@ session_service = InMemorySessionService().create_session(
 
 # An Agent in ADK orchestrates the interaction between the user, the LLM, and the available tools.
 root_agent = LlmAgent(
-    name = "MCP_weather_Agent",
-    model = MODEL_NAME,
-    description = "Provides weather information for specific cities.",
-    instruction = "",
+    name="MCP_weather_Agent",
+    model=MODEL_NAME,
+    description="Provides weather information for specific cities.",
+    instruction="You are a helpful assistant.",
     tools = [toolset]
-)
+)   
 
 
 #The engine that orchestrates the interaction flow. It takes user input, routes it to the appropriate agent, 
@@ -63,7 +64,7 @@ root_agent = LlmAgent(
 # and yields events representing the progress of the interaction.
 runner = Runner(
     app_name = APP_NAME,
-    agent = root_agent,
+    agent = root_agent ,
     session_service = session_service
 )
 
