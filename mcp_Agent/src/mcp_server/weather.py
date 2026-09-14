@@ -1,7 +1,8 @@
-from typing import Any                  # Python Typing strings are used to generate custom responses
-import httpx                            # httpx is used for the Async requests to the weeather API
-from mcp.server.fastmcp import FastMCP  # This is used as a quick scaffolding to creaete the MCP server
-#FastMCP  is an layered abstraction over the regualr mcp.server.Server which provides more granular control over the server streams
+from typing import Any  # Python Typing strings are used to generate custom responses
+
+import httpx  # httpx is used for the Async requests to the weeather API
+from mcp.server.fastmcp import FastMCP  # This is used as a quick scaffolding to create the MCP server
+# FastMCP is an layered abstraction over the regular mcp.server.Server which provides more granular control over the server streams
 
 # Initialize FastMCP server - this creaetes the intial scaffolding for the MCP Server
 mcp = FastMCP("weather")

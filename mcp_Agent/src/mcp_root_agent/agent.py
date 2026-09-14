@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys          
 import traceback
-import Warnings
+import warnings
 
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
@@ -20,6 +20,9 @@ from google.adk.tools.mcp_tool import (
 )
 from google.genai import types
 from mcp import StdioServerParameters
+
+# Import The Sub-agents from the sub_agents folder
+from sub_agents import farewell_agent, greeting_agent
 
 load_dotenv()
 MODEL_NAME = os.getenv('MODEL_NAME')
@@ -65,9 +68,17 @@ SESSION_ID = session_service.id
 root_agent = LlmAgent(
     name="MCP_weather_Agent",
     model=MODEL_NAME,
-    description="Provides weather information for specific cities.",
-    instruction="You are a helpful assistant.",
-    tools = [toolset]
+    description="The main coordinator agent. Handles weather requests and delegates greetings/farewells to specialists.",
+    instruction="You are the main Weather Agent coordinating a team. Your primary responsibility is to provide weather information. "
+                    "Use the toolset ONLY for specific weather requests (e.g., 'weather in New York'). "
+                    "You have specialized sub-agents: "
+                    "1. 'greeting_agent': Handles simple greetings like 'Hi', 'Hello'. Delegate to it for these. "
+                    "2. 'farewell_agent': Handles simple farewells like 'Bye', 'See you'. Delegate to it for these. "
+                    "Analyze the user's query. If it's a greeting, delegate to 'greeting_agent'. If it's a farewell, delegate to 'farewell_agent'. "
+                    "If it's a weather request, handle it yourself using 'get_weather'. "
+                    "For anything else, respond appropriately or state you cannot handle it.",
+    tools = [toolset],
+    sub_agents=[greeting_agent, farewell_agent]
 )   
 
 
