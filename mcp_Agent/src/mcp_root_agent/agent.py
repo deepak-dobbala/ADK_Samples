@@ -104,16 +104,30 @@ async def run_agent() -> None:
         #Content.types is the Standard way of communication with  the LLMs as it defines the standard for who generated the content and what is  the content
         content = types.Content(role="user", parts = [types.Part(text=user_query)])
         async for event in runner.run_async(user_id=USER_ID, session_id = SESSION_ID, new_message = content):
-            #Runner Streams the event list back asyncronoussly with which we can process each streamed event seperaately
-            print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
-            if event.is_final_response():
-                if event.content and event.content.parts:
-                    # Assuming text response in the first part
-                    final_response_text = event.content.parts[0].text
-                elif event.actions and event.actions.escalate: # Handle potential errors/escalations
-                    final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
-                # Add more checks here if needed (e.g., specific error codes)
-                break # Stop processing events once the final response is found
+            # Runner Streams the event list back asyncronously with which we can process each streamed event seperaately
+            # UnComment the following line to see the Event by Event Logs while debugging
+            # print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+
+            # Non-Streaming the text content - Commented to include a Streaming Approach with RunConfig object
+            # if event.is_final_response():
+            #     if event.content and event.content.parts:
+            #         # Assuming text response in the first part
+            #         final_response_text = event.content.parts[0].text
+            #     elif event.actions and event.actions.escalate: # Handle potential errors/escalations
+            #         final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
+            #     # Add more checks here if needed (e.g., specific error codes)
+
+            #     # IMP : Donot write the 'break' statement here cause it exits the async-for loop before the Builder is exited and cleaned
+            #     #       The Builderexit error might interfere with the Values through the context Windows
+            #     # break 
+
+            # Alternative Streaming Approach 
+            if event.response and event.response.parts:
+                #Check if the text content is available
+                for part in event.response.parts:
+                    print(f"{part.text}", end=" ", flush=True)
+
+
         print(f">>>> Agent Response : {final_response_text}")
 
 try:
