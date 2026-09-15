@@ -1,13 +1,18 @@
 import asyncio
+import datetime as dt
 import os
 import sys          
 import traceback
 import warnings
+#from warnings import UserWarning
+
+warnings.filterwarnings('ignore',category=UserWarning)
 
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 from google.adk.runners import (
     Runner,  # Orchestration engine that wraps the App, Agent and Session Service
+    RunConfig # to attach operations configurations to agent such as streaming, metadata, custom_context_window,etc
 )
 from google.adk.sessions import (
     InMemorySessionService,  # Non-persistent Session Storage for Testing and Development
@@ -18,6 +23,7 @@ from google.adk.tools.mcp_tool import (
 from google.adk.tools.mcp_tool import (
     McpToolset,  # McpToolset retrieves the tools from the MCP server
 )
+from google.adk.agents.run_config import StreamingMode
 from google.genai import types
 from mcp import StdioServerParameters
 
@@ -92,18 +98,27 @@ runner = Runner(
     # here e should pass the session_Service instance not the session details
 )
 
+run_config = RunConfig(
+    streaming_mode = StreamingMode.SSE
+    # Optional Parameters
+    # max_output_tokens = 2048
+    # tempaarature = 0.7
+)
+
 async def run_agent() -> None:
     print(">>>> The Weather Agent is Up and Running <<<<")
     print(">>>> This Agent can serve  your Requests related to any Weather Alerts <<<<")
     while True:
+        print(end='\n')
         print("Enter You Query ('exit' to stop): ",end='')
         user_query = input()
         if user_query.lower()=="exit":
             break
-        final_response_text = "Model Did not send any Response" # Default content for when the model returns no content or drops midway
+        # final_response_text = "Model Did not send any Response" # Default content for when the model returns no content or drops midway
         #Content.types is the Standard way of communication with  the LLMs as it defines the standard for who generated the content and what is  the content
         content = types.Content(role="user", parts = [types.Part(text=user_query)])
-        async for event in runner.run_async(user_id=USER_ID, session_id = SESSION_ID, new_message = content):
+        print(">>>> Agent response : ")
+        async for event in runner.run_async(user_id=USER_ID, session_id = SESSION_ID, new_message = content, run_config=run_config):
             # Runner Streams the event list back asyncronously with which we can process each streamed event seperaately
             # UnComment the following line to see the Event by Event Logs while debugging
             # print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
@@ -122,13 +137,14 @@ async def run_agent() -> None:
             #     # break 
 
             # Alternative Streaming Approach 
-            if event.response and event.response.parts:
+            if event.content and event.content.parts:
                 #Check if the text content is available
-                for part in event.response.parts:
-                    print(f"{part.text}", end=" ", flush=True)
+                for part in event.content.parts:
+                    if part.text:
+                        now = dt.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        print(f"{part.text}", end="", flush=True)
 
 
-        print(f">>>> Agent Response : {final_response_text}")
 
 try:
     asyncio.run(run_agent())
