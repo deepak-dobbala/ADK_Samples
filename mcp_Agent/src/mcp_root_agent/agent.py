@@ -6,7 +6,9 @@ import traceback
 import warnings
 #from warnings import UserWarning
 
+# The Experimental  Wornings are ignored : un-comment if  required for debugging
 warnings.filterwarnings('ignore',category=UserWarning)
+
 
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
@@ -141,7 +143,6 @@ async def run_agent() -> None:
                 #Check if the text content is available
                 for part in event.content.parts:
                     if part.text:
-                        now = dt.datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         print(f"{part.text}", end="", flush=True)
 
 
