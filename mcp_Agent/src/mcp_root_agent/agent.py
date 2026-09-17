@@ -31,6 +31,7 @@ from mcp import StdioServerParameters
 
 # Import The Sub-agents from the sub_agents folder
 from sub_agents import farewell_agent, greeting_agent
+from tools.weather_tools import get_stateful_temparature_report
 
 load_dotenv()
 MODEL_NAME = os.getenv('MODEL_NAME')
@@ -61,10 +62,15 @@ async def get_tools_from_mcp(toolset : McpToolset) -> None:
 session_Service_instance = InMemorySessionService()
 # This variable will be alive in the RAM and when the agent request the session with the dynamic ID it will be returned the correct Session
 
+intial_state = {
+    'user_preferred_temparature_metric':'Celsius'
+}
+
 session_service=session_Service_instance.create_session_sync(
         app_name = APP_NAME,
-        user_id = USER_ID
+        user_id = USER_ID,
         # Session_id can also be provided. If not the service generates a value automatically
+        state = intial_state # The inial state is used to configure the information preloaded into the session
     )
 
 #print(f"Session details : {session_service}")
@@ -78,14 +84,14 @@ root_agent = LlmAgent(
     model=MODEL_NAME,
     description="The main coordinator agent. Handles weather requests and delegates greetings/farewells to specialists.",
     instruction="You are the main Weather Agent coordinating a team. Your primary responsibility is to provide weather information. "
-                    "Use the toolset ONLY for specific weather requests (e.g., 'weather in New York'). "
+                    "Use the get_stateful_temparature_report tool to pass the city name and get back the weather report"
                     "You have specialized sub-agents: "
                     "1. 'greeting_agent': Handles simple greetings like 'Hi', 'Hello'. Delegate to it for these. "
                     "2. 'farewell_agent': Handles simple farewells like 'Bye', 'See you'. Delegate to it for these. "
                     "Analyze the user's query. If it's a greeting, delegate to 'greeting_agent'. If it's a farewell, delegate to 'farewell_agent'. "
                     "If it's a weather request, handle it yourself using 'get_weather'. "
                     "For anything else, respond appropriately or state you cannot handle it.",
-    tools = [toolset],
+    tools = [get_stateful_temparature_report],
     sub_agents=[greeting_agent, farewell_agent]
 )   
 
