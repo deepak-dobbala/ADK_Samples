@@ -91,7 +91,7 @@ root_agent = LlmAgent(
                     "Analyze the user's query. If it's a greeting, delegate to 'greeting_agent'. If it's a farewell, delegate to 'farewell_agent'. "
                     "If it's a weather request, handle it yourself using 'get_weather'. "
                     "For anything else, respond appropriately or state you cannot handle it.",
-    tools = [get_stateful_temparature_report],
+    tools = [get_stateful_temparature_report, toolset],
     sub_agents=[greeting_agent, farewell_agent]
 )   
 
