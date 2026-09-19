@@ -161,6 +161,6 @@ except Exception as err:
     
     # 2. Join the list into a single readable block
     error_details = "".join(tb_list)
-    
+
     # 3. Output safely to stderr to prevent stdout JSON-RPC corruption
     print(f"Parsed Traceback Details:\n{error_details}", file=sys.stderr)
