@@ -1,15 +1,17 @@
 import asyncio
 import sys
+import random
 import os
 
-# from agents.technical_ticket_agent import technical_ticket_agent
-# from agents.billing_ticket_agent import billing_ticket_agent
+from agents.technical_ticket_agent import technical_ticket_agent
+from agents.billing_ticket_agent import billing_ticket_agent
 from google.adk import Event, Workflow 
 from google.adk.events import RequestInput
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, FunctionResponse, Part
 from pydantic import BaseModel
+from pydantic_models.agent_models import ticket_input, ticket_output
 
 class UserInput(BaseModel):
     response_text : str  
@@ -19,15 +21,16 @@ def collect_ticket_information():
 
 def classify_ticket_node(node_input : UserInput):
     print(f"ticket details : {node_input.response_text}")
+    ticket_details = node_input.response_text
 
-    # if "payment" in ticket_details.lower() or "charge" in ticket_details.lower():
-    #     return Event(
-    #         output=ticket_details,
-    #         state={
-    #             "ticket_category": "BILLING",
-    #             "ticket": ticket_details,
-    #         },
-    #     )
+    if "payment" in ticket_details.lower() or "charge" in ticket_details.lower():
+        return Event(
+            output=ticket_details,
+            state={
+                "ticket_category": "BILLING",
+                "ticket": ticket_details,
+            },
+        )
 
     return Event(
         output=node_input.response_text,
@@ -40,13 +43,18 @@ def classify_ticket_node(node_input : UserInput):
 def route_ticket_node(node_input: str, ticket_category: str):
     print("Ticket:", node_input)
     print("Category:", ticket_category)
+    payload = ticket_input(
+        ticket_category = ticket_category,
+        ticket_details = node_input,
+        ticket_id = random.randint(101,1000)
+    )
     if ticket_category=="BILLING":
         return Event(
-            output = node_input,
+            output = payload,
             route = "BILLING_TICKET"
         )
     return Event(
-        output=node_input,
+        output=payload,
         route = "TECHNICAL_TICKET"
     )
 
@@ -64,10 +72,8 @@ def billing_node(node_input : str):
         output = "the Billing team is resolvingyour isssue"
     )
 
-def response_node(node_input : str):
-    agent_output = node_input
-    print(agent_output)
-
+def response_node(node_input : ticket_output):
+    print(node_input.ticket_resolve)
 
 #Workflow here dertermines the Edges in the workflow graphs
 root_agent = Workflow(
@@ -78,8 +84,8 @@ root_agent = Workflow(
         # 'START' is a default identifier to declare the start of the workflow and it executes the classsify_ticket_node and route_ticket simultaneously
         (route_ticket_node, {
             # uses an identifier each route is executed based on the condition or the value of the response of the upstream node
-            "TECHNICAL_TICKET" : technical_node,    
-            "BILLING_TICKET" : billing_node
+            "TECHNICAL_TICKET" : technical_ticket_agent,    
+            "BILLING_TICKET" : billing_ticket_agent
         }, response_node )
     ]
 )
