@@ -1,0 +1,95 @@
+# Support Operations Guide
+
+## 1. Customer Authentication
+
+Before processing a customer request, the support agent must verify the customer's identity.
+
+The customer may be authenticated using their registered email address, customer ID, or another approved authentication method.
+
+Support agents must not request or store passwords, authentication tokens, or complete payment-card numbers.
+
+If authentication fails, the request should be placed on hold until the customer completes the required verification process.
+
+## 2. Billing and Payment Issues
+
+Billing-related tickets include duplicate charges, incorrect charges, failed payments, refunds, and unexpected subscription charges.
+
+### Duplicate Charges
+
+A duplicate charge occurs when the customer reports that the same transaction appears more than once.
+
+The support agent should collect the transaction date, transaction amount, and relevant transaction reference.
+
+The agent should verify whether the transactions are actually separate purchases or whether the same transaction was processed multiple times.
+
+If a duplicate charge is confirmed, the ticket should be forwarded to the Billing team for investigation and resolution.
+
+### Failed Payments
+
+A failed payment may occur because of an expired card, insufficient funds, a bank rejection, or a temporary payment-provider error.
+
+The support agent should record the error message and payment date.
+
+Customers should not be asked to provide their complete card number or CVV.
+
+## 3. Technical Issues
+
+Technical tickets include application errors, login problems, broken functionality, API failures, and performance problems.
+
+### Application Errors
+
+For application errors, collect the following information:
+
+* Application or service name
+* Description of the error
+* Approximate time when the error occurred
+* Steps that caused the problem
+* Error message or error code
+
+If available, logs and screenshots may be attached to the ticket.
+
+### API Failures
+
+For API-related problems, collect the endpoint, HTTP status code, request timestamp, and relevant error message.
+
+Authentication credentials, API keys, and access tokens must never be included in a support ticket.
+
+## 4. Ticket Prioritization
+
+Tickets are assigned one of three priority levels.
+
+### High Priority
+
+Use high priority when the issue prevents a critical business operation, affects multiple customers, or involves a potential security incident.
+
+### Medium Priority
+
+Use medium priority when the customer is unable to use an important feature but a temporary workaround exists.
+
+### Low Priority
+
+Use low priority for general questions, minor usability problems, documentation requests, and issues that do not significantly affect the customer's workflow.
+
+## 5. Escalation Procedure
+
+A ticket should be escalated when the first-level support team cannot resolve the issue.
+
+Billing problems should be escalated to the Billing team.
+
+Application and API problems should be escalated to the Technical team.
+
+Potential security incidents should be escalated immediately to the Security team.
+
+When escalating a ticket, include the customer's issue, relevant diagnostic information, troubleshooting steps already performed, and the reason for escalation.
+
+## 6. Ticket Resolution
+
+Once the responsible team resolves the issue, the ticket should contain:
+
+* Resolution summary
+* Actions performed
+* Final ticket status
+* Relevant team or engineer
+* Customer communication, if applicable
+
+A ticket should not be marked as resolved until the required resolution information has been recorded.
