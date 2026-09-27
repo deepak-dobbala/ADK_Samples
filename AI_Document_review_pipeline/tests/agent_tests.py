@@ -8,6 +8,17 @@ from google.adk.sessions import InMemorySessionService
 
 from agents.reviewer_agent import reviewer_agent
 
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(asctime)s [%(levelname)s] %(name)s %(message)s",
+    handlers = [
+        # handles the info or error tothe output stream basically stdout
+        logging.StreamHandler(),
+        # logs are concurrently put into a seperate log file for any persistent external consumption or review
+        logging.FileHandler("document_pipeline.log")
+    ]
+)
+
 logger = logging.getLogger(__name__)
 APP_NAME = "agent_tests"
 USER_ID = "user_id"
@@ -48,3 +59,5 @@ async def test_reriter_agent():
 
 if __name__=="__main__":
     asyncio.run(test_reviewer_agent())
+    # to run use the cmd : uv run --active python m tests.agent_test
+    # this is to run the  test as a module not a scipt which might cause some import errors

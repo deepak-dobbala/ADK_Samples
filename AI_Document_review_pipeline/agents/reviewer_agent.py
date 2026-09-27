@@ -14,18 +14,24 @@ MODEL_NAME = os.getenv("MODEL_NAME")
 
 
 reviewer_agent = LlmAgent(
-    name = "reviewer_agent",
-    model = MODEL_NAME,
-    mode = 'task',
-    description = '''A Reviewer agent that reads the content from the state and returns back a review_statement for the specific chunk 
-                    based on the  Technicality, Clarity, Structure of the content''',
-    instruction = """You are a document reviewer. Review the following chunk: {state.chunk_text}
-                        Evaluate it for:
-                        - Technical correctness
-                        - Clarity
-                        - Structure
-                        Return the review using the required output schema. """,
-    output_schema = review_response,
-    output_key = "chunk_review"
-)
+    name="reviewer_agent",
+    model=MODEL_NAME,
+    mode='task',
+    description="A critical technical reviewer that detects architectural anti-patterns, security flaws, and structural issues.",
+    instruction="""You are an expert technical auditor and harsh documentation reviewer. 
+    Your job is to thoroughly analyze the provided text chunk and aggressively highlight technical inaccuracies, security vulnerabilities, structural flaws, and poor clarity.
 
+    Review the following chunk:
+    <chunk>
+    {state.chunk_text}
+    </chunk>
+
+    Evaluation Guidelines:
+    1. Technical Correctness: Search for security flaws (e.g., Base64 mislabeled as encryption, improper token handling), architectural anti-patterns, incorrect protocol usage, or false performance claims.
+    2. Clarity: Point out informal jargon, ambiguous phrasing, or contradicting statements.
+    3. Structure: Check if the text violates separation of concerns or single-responsibility principles.
+
+    CRITICAL: Do NOT compliment the text if flaws exist. Be direct, explicit, and point out every single technical or structural issue found.""",
+    output_schema=review_response,
+    output_key="chunk_review"
+)

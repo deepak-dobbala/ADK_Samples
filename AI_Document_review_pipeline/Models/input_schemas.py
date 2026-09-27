@@ -11,5 +11,5 @@ class UserInput(BaseModel):
 class chunk_data(BaseModel):
     chunk_index : int
     chunk_boundaries : tuple[int,int]
-    chunk_data : str = ""
+    chunk_text : str = ""
     chunk_review : review_response = ""

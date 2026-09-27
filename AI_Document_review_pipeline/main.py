@@ -12,11 +12,13 @@ from google.adk.events import RequestInput
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.tools.agent_tool import AgentTool
+from google.adk.agents import Context
 from google.genai.types import Content, FunctionResponse, Part
 
 from pydantic import BaseModel
 from Models.input_schemas import UserInput, chunk_data
 from tests.agent_tests import test_reviewer_agent
+from agents.reviewer_agent import reviewer_agent
 
 logging.basicConfig(
     level = logging.INFO,
@@ -85,18 +87,17 @@ def _document_chunking(node_input : UserInput):
         )
 
 
-def _chunk_review(ctx):
-    processed_chunk = ctx.state["last_processed_chunk"]
+async def _chunk_review(ctx):
+    processed_chunk = ctx.state["processed_chunk"]
     document_chunks = ctx.state["document_chunks"]
     processed_chunk += 1
     if processed_chunk<5:
-        chunk_text =  document_chunks[processed_chunk]
-        return Event(
-            output = "calling review_agent in single_turn mode",
-            state = {
-                "chunk_text" : chunk_text
-            }
-        )
+        chunk_text =  document_chunks[processed_chunk].chunk_text
+        ctx.state["chunk_text"] = chunk_text
+        logger.info(f"The chunk_id {document_chunks[processed_chunk].chunk_id} is inputed into the context")
+        output = await Context.run_node(reviewer_agent)
+        document_chunks[processed_chunk].chunk_review = output
+        logger.info()
     return Event(
         output = "review complete"
     )
@@ -164,7 +165,6 @@ async def run_pipeline():
             print(
                 f"Event: {type(event).__name__} "
                 f"| Content: {event.content}"
-                f"| State : {event.content.state}"
             )
 
             if not event.content or not event.content.parts:
