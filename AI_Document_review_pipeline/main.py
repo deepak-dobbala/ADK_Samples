@@ -11,9 +11,12 @@ from google.adk.tools import agent_tool
 from google.adk.events import RequestInput
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk.tools.agent_tool import AgentTool
 from google.genai.types import Content, FunctionResponse, Part
 
 from pydantic import BaseModel
+from Models.input_schemas import UserInput, chunk_data
+from tests.agent_tests import test_reviewer_agent
 
 logging.basicConfig(
     level = logging.INFO,
@@ -32,17 +35,6 @@ dotenv.load_dotenv()
 MODEL_NAME = os.getenv("MODEL_NAME")
 USER_ID = 'USER_001'
 APP_NAME = 'DOCUMENT_ANALYSYS_APP'
-
-
-# Using this pydantic class to declare the format the user input will the resolved bythe client event_loop
-class UserInput(BaseModel):
-    file_path : str
-
-# Similar pydantic class for chunk data useful for sub_agents input and output schema
-class chunk_data(BaseModel):
-    chunk_index : int
-    chunk_boundaries : tuple[int,int]
-    chunk_review : str = ""
 
 
 def _collect_document():
@@ -67,7 +59,8 @@ def _document_chunking(node_input : UserInput):
                     document_chunks.append(
                         chunk_data(
                             chunk_index=chunk_index,
-                            chunk_boundaries=(start, end)
+                            chunk_boundaries=(start, end),
+                            chunk_text=line 
                         )
                     )
                     position = end
@@ -77,7 +70,8 @@ def _document_chunking(node_input : UserInput):
             output = "Chunking succesful",
             route = "review",
             state = {
-                "document_chunks" : document_chunks
+                "document_chunks" : document_chunks,
+                "processed_chunk" : -1
             }
         )
     except Exception as e:
@@ -89,6 +83,23 @@ def _document_chunking(node_input : UserInput):
                 "exception" : str(e)
             }
         )
+
+
+def _chunk_review(ctx):
+    processed_chunk = ctx.state["last_processed_chunk"]
+    document_chunks = ctx.state["document_chunks"]
+    processed_chunk += 1
+    if processed_chunk<5:
+        chunk_text =  document_chunks[processed_chunk]
+        return Event(
+            output = "calling review_agent in single_turn mode",
+            state = {
+                "chunk_text" : chunk_text
+            }
+        )
+    return Event(
+        output = "review complete"
+    )
 
 
 # The data from the previous nodes can also0 be accessed using  ctx [ Context ] that will automatically inject the context into the function
@@ -110,6 +121,7 @@ main_pipeline_agent = Workflow(
     edges = [
         ('START',_collect_document,_document_chunking),
         (_document_chunking , {
+            "review" : _chunk_review,
             "exception" : _error_response
         })
     ]
@@ -152,7 +164,7 @@ async def run_pipeline():
             print(
                 f"Event: {type(event).__name__} "
                 f"| Content: {event.content}"
-                f"| Output : {event.output}"
+                f"| State : {event.content.state}"
             )
 
             if not event.content or not event.content.parts:
@@ -198,4 +210,5 @@ async def run_pipeline():
             break
 
 
-asyncio.run(run_pipeline())
+if __name__=="__main__":
+    asyncio.run(run_pipeline())
