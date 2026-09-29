@@ -5,7 +5,8 @@ from typing import List, Optional
 import logging
 import asyncio
 
-from google.adk import Event, Workflow  
+from google.adk import Event, Workflow
+from google.adk.workflow import node
 from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent
 from google.adk.tools import agent_tool
 from google.adk.events import RequestInput
@@ -73,11 +74,11 @@ def _document_chunking(node_input : UserInput):
             route = "review",
             state = {
                 "document_chunks" : document_chunks,
-                "processed_chunk" : -1
+                "last_processed_chunk" : 0
             }
         )
     except Exception as e:
-        logger.info(f"Exception {e} raised during Chunking")
+        logger.error(f"Exception {e} raised during Chunking")
         return Event(
             output = "encounted an Exception",
             route = "exception",
@@ -86,21 +87,59 @@ def _document_chunking(node_input : UserInput):
             }
         )
 
-
+@node(rerun_on_resume=True)
 async def _chunk_review(ctx):
-    processed_chunk = ctx.state["processed_chunk"]
-    document_chunks = ctx.state["document_chunks"]
-    processed_chunk += 1
-    if processed_chunk<5:
-        chunk_text =  document_chunks[processed_chunk].chunk_text
-        ctx.state["chunk_text"] = chunk_text
-        logger.info(f"The chunk_id {document_chunks[processed_chunk].chunk_id} is inputed into the context")
-        output = await Context.run_node(reviewer_agent)
-        document_chunks[processed_chunk].chunk_review = output
-        logger.info()
-    return Event(
-        output = "review complete"
-    )
+    try :
+        processed_chunk = 0
+        document_chunks = ctx.state["document_chunks"]
+        while processed_chunk<5:
+            chunk_text =  document_chunks[processed_chunk].chunk_text
+            ctx.state["chunk_text"] = chunk_text
+            logger.info(f"The chunk_id {document_chunks[processed_chunk].chunk_index} is inputed into the context \n content : {document_chunks[processed_chunk].chunk_text}")
+            output = await ctx.run_node(node = reviewer_agent)
+            if not output:
+                logger.info(f"The chunk {document_chunks[processed_chunk].chunk_index} is skipped because it was empty or a heading")
+            else:
+                document_chunks[processed_chunk].chunk_review = output
+                logger.info(f"The final chunk_object is : {document_chunks[processed_chunk]}")
+            processed_chunk += 1
+        return Event(
+           output = "review complete"
+        )
+        
+        # last_processed_chunk = ctx.state["last_processed_chunk"]
+        # document_chunks = ctx.state["document_chunks"]
+        # if last_processed_chunk  < 5:
+        #     chunk_index = document_chunks[last_processed_chunk].chunk_index
+        #     logger.info(f"the chunk :{chunk_index} is being  processed")
+        #     chunk_text = document_chunks[last_processed_chunk].chunk_text
+        #     ctx.state["chunk_text"] = chunk_text
+        #     output = await ctx.run_node(node = reviewer_agent)
+        #     if not output :
+        #         logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading")
+        #     else:
+        #         document_chunks[last_processed_chunk].chunk_review = output
+        #         logger.info(f"chunk {chunk_index} review completed")
+        #     ctx.state["last_processed_chunk"] = last_processed_chunk+1
+        #     return Event(
+        #         output = "review succesful",
+        #         route = "review"
+        #     )
+        # return Event(
+        #     output = "review succesful",
+        #     route = "rewrite"
+        # )
+
+    except Exception as e:
+        logger.error(f"Error occured while processing chunk : {e}")
+        return Event(
+            output = "An exception  occured while processing the chunks",
+            route = "exception",
+            state = {
+                "exception" : e
+            }
+        )
+    
 
 
 # The data from the previous nodes can also0 be accessed using  ctx [ Context ] that will automatically inject the context into the function
@@ -122,6 +161,10 @@ main_pipeline_agent = Workflow(
     edges = [
         ('START',_collect_document,_document_chunking),
         (_document_chunking , {
+            "review" : _chunk_review,
+            "exception" : _error_response
+        }),
+        (_chunk_review,{
             "review" : _chunk_review,
             "exception" : _error_response
         })

@@ -27,11 +27,11 @@ reviewer_agent = LlmAgent(
     </chunk>
 
     Evaluation Guidelines:
-    1. Technical Correctness: Search for security flaws (e.g., Base64 mislabeled as encryption, improper token handling), architectural anti-patterns, incorrect protocol usage, or false performance claims.
-    2. Clarity: Point out informal jargon, ambiguous phrasing, or contradicting statements.
-    3. Structure: Check if the text violates separation of concerns or single-responsibility principles.
+    1. If the inputed text is either empty (e.g, "" or "  " : empty string, '\n' : new_line) or a heading to a section (e.g, "## 1. Customer Authentication"), there is not need for the verification you can return None
+    2. Technical Correctness: Search for security flaws (e.g., Base64 mislabeled as encryption, improper token handling), architectural anti-patterns, incorrect protocol usage, or false performance claims.
+    3. Clarity: Point out informal jargon, ambiguous phrasing, or contradicting statements.
+    4. Structure: Check if the text violates separation of concerns or single-responsibility principles.
 
     CRITICAL: Do NOT compliment the text if flaws exist. Be direct, explicit, and point out every single technical or structural issue found.""",
-    output_schema=review_response,
-    output_key="chunk_review"
-)
+    output_schema=review_response
+    )
