@@ -5,8 +5,8 @@ import logging
 
 from google.adk.agents import LlmAgent
 #from main import chunk_data
-from Models.input_schemas import chunk_data
-from Models.output_schemas import review_response
+from Models.input_schemas import ChunkData
+from Models.output_schemas import ReviewResponse
 
 dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
@@ -33,5 +33,5 @@ reviewer_agent = LlmAgent(
     4. Structure: Check if the text violates separation of concerns or single-responsibility principles.
 
     CRITICAL: Do NOT compliment the text if flaws exist. Be direct, explicit, and point out every single technical or structural issue found.""",
-    output_schema=review_response
+    output_schema=ReviewResponse
     )

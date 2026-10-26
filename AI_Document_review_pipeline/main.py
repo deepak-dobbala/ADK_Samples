@@ -1,24 +1,20 @@
 import os
 import sys
 import dotenv
-from typing import List, Optional
+from typing import list, Optional
 import logging
 import asyncio
 
 from google.adk import Event, Workflow
 from google.adk.workflow import node
-from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent
-from google.adk.tools import agent_tool
 from google.adk.events import RequestInput
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google.adk.tools.agent_tool import AgentTool
-from google.adk.agents import Context
 from google.genai.types import Content, FunctionResponse, Part
 
 from pydantic import BaseModel
-from Models.input_schemas import UserInput, chunk_data
-from tests.agent_tests import test_reviewer_agent
+from Models.input_schemas import UserInput, ChunkData
+from Models.output_schemas import ReviewResponse, RewriteResponse
 from agents.reviewer_agent import reviewer_agent
 
 logging.basicConfig(
@@ -60,7 +56,7 @@ def _document_chunking(node_input : UserInput):
                     end = position + len(line)
                     #logger.info(f"chunk-{chunk_index} : {line} \n chunk boundaries : {start} - {end}")
                     document_chunks.append(
-                        chunk_data(
+                        ChunkData(
                             chunk_index=chunk_index,
                             chunk_boundaries=(start, end),
                             chunk_text=line 
@@ -87,48 +83,65 @@ def _document_chunking(node_input : UserInput):
             }
         )
 
+
+'''
+Here the @node() decorator is  required to declare the rerun_on_resume paarmeter withot which teh node will run from the starting point when it receives the awaited response from the agent
+ctx : Context is used as a parameter when ever we are required to access multiple parameters from the context state
+'''
 @node(rerun_on_resume=True)
 async def _chunk_review(ctx):
     try :
-        processed_chunk = 0
-        document_chunks = ctx.state["document_chunks"]
-        while processed_chunk<5:
-            chunk_text =  document_chunks[processed_chunk].chunk_text
-            ctx.state["chunk_text"] = chunk_text
-            logger.info(f"The chunk_id {document_chunks[processed_chunk].chunk_index} is inputed into the context \n content : {document_chunks[processed_chunk].chunk_text}")
-            output = await ctx.run_node(node = reviewer_agent)
-            if not output:
-                logger.info(f"The chunk {document_chunks[processed_chunk].chunk_index} is skipped because it was empty or a heading")
-            else:
-                document_chunks[processed_chunk].chunk_review = output
-                logger.info(f"The final chunk_object is : {document_chunks[processed_chunk]}")
-            processed_chunk += 1
-        return Event(
-           output = "review complete"
-        )
-        
-        # last_processed_chunk = ctx.state["last_processed_chunk"]
+        '''
+        METHOD 1 : it uses an inine while or for loop to iterate over all  the chunks and pass the chunk to the model to review the data 
+        This means durring the iteration the entire review response would be in volatile RAM memory which would casue any intermediate rash to lose the progress and start from teh first chunk
+        '''
+        # processed_chunk = 0
         # document_chunks = ctx.state["document_chunks"]
-        # if last_processed_chunk  < 5:
-        #     chunk_index = document_chunks[last_processed_chunk].chunk_index
-        #     logger.info(f"the chunk :{chunk_index} is being  processed")
-        #     chunk_text = document_chunks[last_processed_chunk].chunk_text
+        # while processed_chunk<5:
+        #     chunk_text =  document_chunks[processed_chunk].chunk_text
         #     ctx.state["chunk_text"] = chunk_text
+        #     logger.info(f"The chunk_id {document_chunks[processed_chunk].chunk_index} is inputed into the context \n content : {document_chunks[processed_chunk].chunk_text}")
         #     output = await ctx.run_node(node = reviewer_agent)
-        #     if not output :
-        #         logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading")
+        #     if not output:
+        #         logger.info(f"The chunk {document_chunks[processed_chunk].chunk_index} is skipped because it was empty or a heading")
         #     else:
-        #         document_chunks[last_processed_chunk].chunk_review = output
-        #         logger.info(f"chunk {chunk_index} review completed")
-        #     ctx.state["last_processed_chunk"] = last_processed_chunk+1
-        #     return Event(
-        #         output = "review succesful",
-        #         route = "review"
-        #     )
+        #         document_chunks[processed_chunk].chunk_review = output
+        #         logger.info(f"The final chunk_object is : {document_chunks[processed_chunk]}")
+        #     processed_chunk += 1
         # return Event(
-        #     output = "review succesful",
-        #     route = "rewrite"
+        #    output = "review complete"
         # )
+        
+
+        '''
+        METHOD 2 : intead of an explicit loop use workflow edges to simulate the looping within the _chunk_review node, 
+        this will cause the checkpointing of the chunk_review content from the agent. The data is not volatile as the next chunk eneters the next iteration
+        which will write the content , this is a production ready transformation should be configured
+        '''
+        last_processed_chunk = ctx.state["last_processed_chunk"]
+        document_chunks = ctx.state["document_chunks"]
+        if last_processed_chunk  < 5:
+            chunk_index = document_chunks[last_processed_chunk].chunk_index
+            logger.info(f"the chunk :{chunk_index} is being  processed")
+            chunk_text = document_chunks[last_processed_chunk].chunk_text
+            ctx.state["chunk_text"] = chunk_text
+            output = await ctx.run_node(node = reviewer_agent)
+            if not output :
+                logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading")
+            else:
+                review = ReviewResponse.model_validate( output )
+                document_chunks[last_processed_chunk].chunk_review = review
+                logger.info(f"chunk {chunk_index} review completed")
+            ctx.state["last_processed_chunk"] = last_processed_chunk+1
+            return Event(
+                output = "review succesful",
+                route = "review"
+            )
+        return Event(
+            output = "review succesful",
+            route = "rewrite"
+        )
+
 
     except Exception as e:
         logger.error(f"Error occured while processing chunk : {e}")
@@ -140,7 +153,10 @@ async def _chunk_review(ctx):
             }
         )
     
+def _rewrite_chunk(ctx):
 
+
+    return
 
 # The data from the previous nodes can also0 be accessed using  ctx [ Context ] that will automatically inject the context into the function
 # Another approach is to use the state key as the function argument, ADK automatically resolves them  by inputing them with values from context.State
@@ -166,6 +182,7 @@ main_pipeline_agent = Workflow(
         }),
         (_chunk_review,{
             "review" : _chunk_review,
+            "rewrite" : _rewrite_chunk,
             "exception" : _error_response
         })
     ]
