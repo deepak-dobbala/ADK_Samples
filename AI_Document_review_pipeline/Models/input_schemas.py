@@ -13,3 +13,7 @@ class ChunkData(BaseModel):
     chunk_boundaries : tuple[int,int]
     chunk_text : str = None
     chunk_review : ReviewResponse = None
+
+class RewriterInput(BaseModel):
+    chunk_text : str
+    chunk_review : ReviewResponse = None

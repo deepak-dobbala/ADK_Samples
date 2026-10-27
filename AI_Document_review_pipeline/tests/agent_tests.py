@@ -9,7 +9,7 @@ from google.adk.sessions import InMemorySessionService
 from agents.reviewer_agent import reviewer_agent
 from agents.rewriter_agent import rewriter_agent
 
-from Models.input_schemas import ChunkData
+from Models.input_schemas import ChunkData, RewriterInput
 from Models.output_schemas import ReviewResponse
 
 logging.basicConfig(
@@ -62,15 +62,14 @@ async def test_rewriter_agent():
     try : 
         session_service = InMemorySessionService()
 
-        session = await session_service.create_session(app_name = APP_NAME, user_id = USER_ID, state = {         
+        '''
+        The State shoudl always be a key-value paired dictionary as the agents access the information as the key values But the values themselves ca be of any Types or objects
+        The subagents access teh information as {key_value}
+        if the state is initialized as a  
+        '''
+        session = await session_service.create_session(app_name = APP_NAME, user_id = USER_ID, state = {        
             'chunk_text':"""The auth service takes user credentials (username and pass) and checks them against the database. If ok, it makes a JWT token that is encrypted using Base64 so nobody can read it. Then this token is saved into the database on the server and reused for every single subsequent request by fetching it from DB every time, which makes the app super fast and scalable.""",
             'chunk_review':ReviewResponse(
-                has_errors=True,
-                detected_issues=[
-                    "Base64 is mislabeled as encryption (Base64 is encoding, not encryption).",
-                    "Storing stateless JWTs in a database to query on every request defeats JWT architecture and creates a DB performance bottleneck.",
-                    "Informal terminology ('pass', 'If ok').",
-                ],
                 technical_review="Incorrectly claims Base64 is encryption. Storing JWTs in a DB to validate on every request contradicts stateless JWT design and destroys scalability.",
                 clarity_review="Uses informal slang ('pass', 'If ok') and contains contradictory performance claims.",
                 structure_review="Lacks clear sequence boundaries between credential verification, token generation, and token validation.",

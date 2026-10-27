@@ -3,8 +3,8 @@ import os
 
 from google.adk.agents import LlmAgent
 
-from Models.input_schemas import ChunkData
-from Models.output_schemas import ReviewResponse
+from Models.input_schemas import ChunkData, RewriterInput
+from Models.output_schemas import ReviewResponse, RewriteResponse
 
 MODEL_NAME = os.getenv("MODEL_NAME")
 
@@ -16,5 +16,7 @@ rewriter_agent = LlmAgent(
     1. access the {chunk_review} from the input_content it will give you guidelines about what is missing in the content in terms of the technical_Review, clairt_review, structure_review
     2. if any of the property is None or N/A ignore it and move to the next property
     3. make use of these review bullets to rewrite the content {chunk_text} 
-    4. pass the rewritten  string as the output back to the caller node'''
+    4. append the rewritten_content into the {chunk_text}''',
+    input_schema=RewriterInput,
+    output_schema=RewriteResponse,
 )
