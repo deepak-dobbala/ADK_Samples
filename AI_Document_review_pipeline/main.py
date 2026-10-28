@@ -45,6 +45,10 @@ def _collect_document():
 # def _context_doc_chunking(ctx: Content):
 #     print(ctx.state)
 
+
+'''
+We can pass Both the context argument [which will be resource injected into the function by ADK] and the node_input which can be used to access the input data 
+'''
 def _document_chunking(ctx, node_input : UserInput):
     file_path = node_input.file_path 
     ctx.state["file_path"]=file_path
