@@ -1,9 +1,10 @@
 import os
 import sys
 import dotenv
-from typing import list, Optional
+from typing import Optional
 import logging
 import asyncio
+from datetime import datetime
 
 from google.adk import Event, Workflow
 from google.adk.workflow import node
@@ -16,6 +17,7 @@ from pydantic import BaseModel
 from Models.input_schemas import UserInput, ChunkData
 from Models.output_schemas import ReviewResponse, RewriteResponse
 from agents.reviewer_agent import reviewer_agent
+from agents.rewriter_agent import rewriter_agent
 
 logging.basicConfig(
     level = logging.INFO,
@@ -40,8 +42,12 @@ def _collect_document():
     logger.info("document collection EVENT yeilded")
     yield RequestInput(message="Enter your Document Path : ")
 
-def _document_chunking(node_input : UserInput):
-    file_path = node_input.file_path    
+# def _context_doc_chunking(ctx: Content):
+#     print(ctx.state)
+
+def _document_chunking(ctx, node_input : UserInput):
+    file_path = node_input.file_path 
+    ctx.state["file_path"]=file_path
     try:
         document_chunks = []
         chunk_index=0
@@ -85,7 +91,9 @@ def _document_chunking(node_input : UserInput):
 
 
 '''
-Here the @node() decorator is  required to declare the rerun_on_resume paarmeter withot which teh node will run from the starting point when it receives the awaited response from the agent
+Here the @node() decorator is  required to declare the rerun_on_resume paarmeter without which teh node will run from the starting point when it receives the awaited response from the agent
+This is to make sure that the python does not have to serialize the procedure before ending teh current call stack 
+NOTE : make sure to not include any incremental operations to teh state resources [state["resource"]+=1] or external calls [i.e, GET, POST, etc] beacuse they will execute twice
 ctx : Context is used as a parameter when ever we are required to access multiple parameters from the context state
 '''
 @node(rerun_on_resume=True)
@@ -120,7 +128,8 @@ async def _chunk_review(ctx):
         '''
         last_processed_chunk = ctx.state["last_processed_chunk"]
         document_chunks = ctx.state["document_chunks"]
-        if last_processed_chunk  < 5:
+        if last_processed_chunk  < 100:
+            logger.info(f"Attempt Reviewing chunk {last_processed_chunk}")
             chunk_index = document_chunks[last_processed_chunk].chunk_index
             logger.info(f"the chunk :{chunk_index} is being  processed")
             chunk_text = document_chunks[last_processed_chunk].chunk_text
@@ -134,17 +143,20 @@ async def _chunk_review(ctx):
                 logger.info(f"chunk {chunk_index} review completed")
             ctx.state["last_processed_chunk"] = last_processed_chunk+1
             return Event(
-                output = "review succesful",
+                output = "review succesful for chunk {last_processed_chunk}",
                 route = "review"
             )
         return Event(
-            output = "review succesful",
-            route = "rewrite"
+            output = "review Finished",
+            route = "rewrite",
+            state = {
+                "last_rewritten_chunk" : 0
+            }
         )
 
 
     except Exception as e:
-        logger.error(f"Error occured while processing chunk : {e}")
+        logger.error(f"Error occured while processing chunk : {last_processed_chunk}")
         return Event(
             output = "An exception  occured while processing the chunks",
             route = "exception",
@@ -153,29 +165,101 @@ async def _chunk_review(ctx):
             }
         )
     
-def _rewrite_chunk(ctx):
+'''
+Here the async-await will handle any long lasting chunk  node processes
+But for interrupted processes we have to use the attrubute rerun_on_resume = True with the @node decorator
+'''
+@node(rerun_on_resume=True)
+async def _rewrite_chunk(ctx):
+    try:
+        last_rewritten_chunk = ctx.state["last_rewritten_chunk"]
+        if last_rewritten_chunk < 100:
+            logger.info(f"Attept : rewriting chunk {last_rewritten_chunk}")
+            document_chunks = ctx.state["document_chunks"]
+            # chunk_index = document_chunks[last_rewritten_chunk].chunk_index
+            #logger.info(f"the chunk {last_rewritten_chunk} is being  rewritten")
+            ctx.state["chunk_text"] = document_chunks[last_rewritten_chunk].chunk_text
+            ctx.state["chunk_review"] = document_chunks[last_rewritten_chunk].chunk_review
+            output = await ctx.run_node(node = rewriter_agent)
+            output = RewriteResponse.model_validate(output)
+            if  output.is_rewritten:
+                logger.info(f"Rewriting Succesfull")
+            else:
+                logger.info(f"rewritinng Skipped because of empty content or heading")
+            document_chunks[last_rewritten_chunk].chunk_text = output.rewritten_content
+            document_chunks[last_rewritten_chunk].changes_applied = output.changes_applied
+            ctx.state["last_rewritten_chunk"]+=1
+            return Event(
+                output = "Rewrite Succesful for chunk {last_rewritten_chunk}",
+                route = "rewrite"
+            )
 
+        return Event(
+            output = "Rewrite Finished",
+            route = "assemble",
+            state={
+                "last_updated_chunk":0
+            }
+        )
 
-    return
+    except Exception as e:
+        logger.error(f"Error occured while rewriting chunk : {last_rewritten_chunk}")
+        return Event(
+            output = "An exception  occured while processing the chunks",
+            route = "exception",
+            state = {
+                "exception" : e
+            }
+        )
+        
 
 # The data from the previous nodes can also0 be accessed using  ctx [ Context ] that will automatically inject the context into the function
 # Another approach is to use the state key as the function argument, ADK automatically resolves them  by inputing them with values from context.State
 # If there is no matching key in context.State it throws a RunTime  exception
 def _error_response(ctx):
     exception = ctx.state["exception"]
+    logger.error(f"exception : {exception}")
     return Event(
         invocation_id = "error_id",
         output = f"Exception occurend : {exception}"
     )
 
 
-def _output_to_file():
-    return
+def _assemble_document(ctx):
+    last_updated_chunk = ctx.state["last_updated_chunk"]
+    try :
+        file_path = ctx.state["file_path"]
+        updated_file_path = file_path + str(datetime.now().strftime("%Y%m%d_%H%M%S"))
+        document_chunks = ctx.state["document_chunks"]
+
+        if last_updated_chunk<100:
+            chunk_text = document_chunks[last_updated_chunk].chunk_text
+            with open(updated_file_path,"a") as output_file:
+                output_file.write(chunk_text) 
+            ctx.state["last_updated_chunk"]+=1
+            return Event(
+                output="chunk Update Complete",
+                route="assemble"
+            )
+
+        return Event(
+            output = "complete Document rewwrite and updation Complete",
+            author = "Doc_updation_Pipeline"
+        )
+    except Exception as e:
+        logger.error(f"Error occured while updating chunk {last_updated_chunk}")
+        return Event(
+            output="An exception occured",
+            route = "exception",
+            state={
+                "exception" : e
+            }
+        )
 
 main_pipeline_agent = Workflow(
     name = "document_processing_pipeline",
     edges = [
-        ('START',_collect_document,_document_chunking),
+        ('START',_collect_document, _document_chunking),
         (_document_chunking , {
             "review" : _chunk_review,
             "exception" : _error_response
@@ -183,6 +267,15 @@ main_pipeline_agent = Workflow(
         (_chunk_review,{
             "review" : _chunk_review,
             "rewrite" : _rewrite_chunk,
+            "exception" : _error_response
+        }),
+        (_rewrite_chunk,{
+            "rewrite":_rewrite_chunk,
+            "assemble": _assemble_document,
+            "exception" : _error_response
+        }),
+        (_assemble_document,{
+            "assemble":_assemble_document,
             "exception" : _error_response
         })
     ]
