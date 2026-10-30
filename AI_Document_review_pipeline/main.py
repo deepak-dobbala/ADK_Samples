@@ -16,8 +16,10 @@ from google.genai.types import Content, FunctionResponse, Part
 from pydantic import BaseModel
 from Models.input_schemas import UserInput, ChunkData
 from Models.output_schemas import ReviewResponse, RewriteResponse
-from agents.reviewer_agent import reviewer_agent
-from agents.rewriter_agent import rewriter_agent
+# from agents.reviewer_agent import reviewer_agent
+# from agents.rewriter_agent import rewriter_agent
+from agents.model_fallback import ModelRouter
+
 
 logging.basicConfig(
     level = logging.INFO,
@@ -37,6 +39,10 @@ MODEL_NAME = os.getenv("MODEL_NAME")
 USER_ID = 'USER_001'
 APP_NAME = 'DOCUMENT_ANALYSYS_APP'
 
+routed_reviewer_agent = ModelRouter(agent_name = "reviewer_agent")
+routed_reviewer_agent.initialize_agent()
+routed_rewriter_agent = ModelRouter(agent_name = "rewriter_agent")
+routed_rewriter_agent.initialize_agent()
 
 def _collect_document():
     logger.info("document collection EVENT yeilded")
@@ -135,10 +141,10 @@ async def _chunk_review(ctx):
         if last_processed_chunk  < 100:
             logger.info(f"Attempt Reviewing chunk {last_processed_chunk}")
             chunk_index = document_chunks[last_processed_chunk].chunk_index
-            logger.info(f"the chunk :{chunk_index} is being  processed")
+            # logger.info(f"the chunk :{chunk_index} is being  processed")
             chunk_text = document_chunks[last_processed_chunk].chunk_text
             ctx.state["chunk_text"] = chunk_text
-            output = await ctx.run_node(node = reviewer_agent)
+            output = await ctx.run_node(node = routed_reviewer_agent.agent_instance)
             if not output :
                 logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading")
             else:
@@ -160,6 +166,14 @@ async def _chunk_review(ctx):
 
 
     except Exception as e:
+        status_code = getattr(e, "status_code", getattr(e, "code", None))
+
+        if str(status_code) == "429" or "RateLimit" in type(e).__name__:
+            routed_reviewer_agent.model_rotate()
+            return Event(
+                output=f"retry with fallback model on chunk {last_processed_chunk}",
+                route="review",
+            )
         logger.error(f"Error occured while processing chunk : {last_processed_chunk}")
         return Event(
             output = "An exception  occured while processing the chunks",
@@ -184,7 +198,7 @@ async def _rewrite_chunk(ctx):
             #logger.info(f"the chunk {last_rewritten_chunk} is being  rewritten")
             ctx.state["chunk_text"] = document_chunks[last_rewritten_chunk].chunk_text
             ctx.state["chunk_review"] = document_chunks[last_rewritten_chunk].chunk_review
-            output = await ctx.run_node(node = rewriter_agent)
+            output = await ctx.run_node(node = routed_rewriter_agent.agent_instance)
             output = RewriteResponse.model_validate(output)
             if  output.is_rewritten:
                 logger.info(f"Rewriting Succesfull")
@@ -207,6 +221,12 @@ async def _rewrite_chunk(ctx):
         )
 
     except Exception as e:
+        if e.code=="429":
+            routed_rewriter_agent.model_rotate()
+            return Event(
+                output=f"retry with fallback model on chunk {last_rewritten_chunk}",
+                route="rewrite"
+            )
         logger.error(f"Error occured while rewriting chunk : {last_rewritten_chunk}")
         return Event(
             output = "An exception  occured while processing the chunks",
