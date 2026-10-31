@@ -5,6 +5,7 @@ from typing import Optional
 import logging
 import asyncio
 from datetime import datetime
+import time
 
 from google.adk import Event, Workflow
 from google.adk.workflow import node
@@ -39,6 +40,9 @@ MODEL_NAME = os.getenv("MODEL_NAME")
 USER_ID = 'USER_001'
 APP_NAME = 'DOCUMENT_ANALYSYS_APP'
 
+'''
+Initalizing the objectsof ModelRouter that acts as the 
+'''
 routed_reviewer_agent = ModelRouter(agent_name = "reviewer_agent")
 routed_reviewer_agent.initialize_agent()
 routed_rewriter_agent = ModelRouter(agent_name = "rewriter_agent")
@@ -136,24 +140,27 @@ async def _chunk_review(ctx):
         this will cause the checkpointing of the chunk_review content from the agent. The data is not volatile as the next chunk eneters the next iteration
         which will write the content , this is a production ready transformation should be configured
         '''
+        start = time.perf_counter()
         last_processed_chunk = ctx.state["last_processed_chunk"]
         document_chunks = ctx.state["document_chunks"]
-        if last_processed_chunk  < 100:
+        if last_processed_chunk  < 20:
             logger.info(f"Attempt Reviewing chunk {last_processed_chunk}")
             chunk_index = document_chunks[last_processed_chunk].chunk_index
             # logger.info(f"the chunk :{chunk_index} is being  processed")
             chunk_text = document_chunks[last_processed_chunk].chunk_text
             ctx.state["chunk_text"] = chunk_text
             output = await ctx.run_node(node = routed_reviewer_agent.agent_instance)
+            delta_duration = time.perf_counter()-start
             if not output :
-                logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading")
+                logger.info(f"The chunk {chunk_index} review was skipped becasue of empty text or a heading  in {delta_duration} time")
             else:
                 review = ReviewResponse.model_validate( output )
                 document_chunks[last_processed_chunk].chunk_review = review
-                logger.info(f"chunk {chunk_index} review completed")
+                logger.info(f"review chunk {chunk_index} model_index : {routed_reviewer_agent.current_config_model} Delta Duration : {delta_duration}")
+            
             ctx.state["last_processed_chunk"] = last_processed_chunk+1
             return Event(
-                output = "review succesful for chunk {last_processed_chunk}",
+                output = f"review succesful for chunk {last_processed_chunk}",
                 route = "review"
             )
         return Event(
@@ -166,9 +173,17 @@ async def _chunk_review(ctx):
 
 
     except Exception as e:
+        '''
+        Checks for the 429 or "ResourceExhaustedException" from the ModelRespone and will pass  it to the rotations function that can change the model subsequently
+        '''
         status_code = getattr(e, "status_code", getattr(e, "code", None))
 
-        if str(status_code) == "429" or "RateLimit" in type(e).__name__:
+        '''
+        429 : status code for the RateLimitError that is usually caused due to the max Requests per minute or max Tokens per minute limit on models 
+        404 : Model Not found Error [Some models might get depricated in later releases which cannot be tracked effectively everytime]
+        5xx : Server Side Error related to Model Unavilablity or Unusual Traffic to the models 
+        '''
+        if str(status_code) == "429" or str(status_code)=="500" or str(status_code)=="503" or str(status_code)=="404" or "RateLimit" in type(e).__name__:
             routed_reviewer_agent.model_rotate()
             return Event(
                 output=f"retry with fallback model on chunk {last_processed_chunk}",
@@ -191,7 +206,8 @@ But for interrupted processes we have to use the attrubute rerun_on_resume = Tru
 async def _rewrite_chunk(ctx):
     try:
         last_rewritten_chunk = ctx.state["last_rewritten_chunk"]
-        if last_rewritten_chunk < 100:
+        if last_rewritten_chunk < 20:
+            start = time.perf_counter()
             logger.info(f"Attept : rewriting chunk {last_rewritten_chunk}")
             document_chunks = ctx.state["document_chunks"]
             # chunk_index = document_chunks[last_rewritten_chunk].chunk_index
@@ -200,15 +216,16 @@ async def _rewrite_chunk(ctx):
             ctx.state["chunk_review"] = document_chunks[last_rewritten_chunk].chunk_review
             output = await ctx.run_node(node = routed_rewriter_agent.agent_instance)
             output = RewriteResponse.model_validate(output)
+            delta_duration = time.perf_counter()-start
             if  output.is_rewritten:
-                logger.info(f"Rewriting Succesfull")
+                logger.info(f"rewrite chunk {last_rewritten_chunk} model_index : {routed_reviewer_agent.current_config_model} Delta Duration : {delta_duration}")
             else:
-                logger.info(f"rewritinng Skipped because of empty content or heading")
+                logger.info(f"rewritinng Skipped because of empty content or heading in delta : {delta_duration}")
             document_chunks[last_rewritten_chunk].chunk_text = output.rewritten_content
             document_chunks[last_rewritten_chunk].changes_applied = output.changes_applied
             ctx.state["last_rewritten_chunk"]+=1
             return Event(
-                output = "Rewrite Succesful for chunk {last_rewritten_chunk}",
+                output = f"Rewrite Succesful for chunk {last_rewritten_chunk}",
                 route = "rewrite"
             )
 
@@ -221,7 +238,7 @@ async def _rewrite_chunk(ctx):
         )
 
     except Exception as e:
-        if e.code=="429":
+        if e.code=="429" or str(e.code)=="500" or str(e.code)=="503" or  str(e.code)=="404":
             routed_rewriter_agent.model_rotate()
             return Event(
                 output=f"retry with fallback model on chunk {last_rewritten_chunk}",
@@ -256,7 +273,7 @@ def _assemble_document(ctx):
         updated_file_path = file_path + str(datetime.now().strftime("%Y%m%d_%H%M%S"))
         document_chunks = ctx.state["document_chunks"]
 
-        if last_updated_chunk<100:
+        if last_updated_chunk<20:
             chunk_text = document_chunks[last_updated_chunk].chunk_text
             with open(updated_file_path,"a") as output_file:
                 output_file.write(chunk_text) 
